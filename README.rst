@@ -27,11 +27,11 @@ The stated goal of this module is to be a drop-in replacement for ``re``, i.e.::
         import re
 
 That being said, there are features of the ``re`` module that this module may
-never have; these will be handled through fallback to the original ``re`` module``:
+never have; these will be handled through fallback to the original ``re`` module:
 
-    - lookahead assertions ``(?!...)``
-    - backreferences (``\\n`` in search pattern)
-    - \W and \S not supported inside character classes
+* lookahead assertions ``(?!...)``
+* backreferences (``\\n`` in search pattern)
+* \W and \S not supported inside character classes
 
 On the other hand, unicode character classes are supported (e.g., ``\p{Greek}``).
 Syntax reference: https://github.com/google/re2/wiki/Syntax

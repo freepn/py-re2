@@ -10,3 +10,4 @@ tests/access.log
 *.pyc
 *.swp
 *.egg-info
+*.tox

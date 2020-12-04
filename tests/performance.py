@@ -134,7 +134,7 @@ def getwikidata():
     global _wikidata
     if _wikidata is None:
         _wikidata = gzip.open('wikipages.xml.gz', 'rb').read()
-    return _wikidata
+    return _wikidata.decode('utf8')
 
 
 

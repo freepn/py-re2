@@ -1,9 +1,13 @@
+# -*- coding: utf-8 -*-
+#
+
 import io
 import os
 import re
 import sys
 import platform
-from distutils.core import setup, Extension, Command
+from setuptools import setup
+from distutils.core import Command, Extension
 
 MINIMUM_CYTHON_VERSION = '0.20'
 BASE_DIR = os.path.dirname(__file__)
@@ -51,7 +55,7 @@ else:
 
 
 # Locate the re2 module
-_re2_prefixes = ['/usr', '/usr/local', '/opt/', '/opt/local', os.environ['HOME'] + '/.local']
+_re2_prefixes = ['/usr', '/usr/local', '/opt/', '/opt/local', os.environ.get('HOME', '') + '/.local']
 
 re2_prefix = ''
 for a in _re2_prefixes:
@@ -105,16 +109,18 @@ def main():
                 'warn.unreachable': True,
             })
     setup(
-        name='pyre2',
+        name='py-re2',
         version='0.3.1',
         description='Python wrapper for Google\'s RE2 using Cython',
         long_description=get_long_description(),
+	long_description_content_type='text/x-rst',
         author=get_authors(),
         license='New BSD License',
         author_email='andreas@unstable.nl',
         url='https://github.com/andreasvc/pyre2',
         ext_modules = ext_modules,
         cmdclass=cmdclass,
+        zip_safe=False,
         classifiers = [
             'License :: OSI Approved :: BSD License',
             'Programming Language :: Cython',
