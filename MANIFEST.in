@@ -9,7 +9,7 @@ include tests/finditer.txt
 include tests/wikipages.xml.gz
 include tests/__init__.py
 include tests/match_expand.txt
-include tests/test.py
+include tests/re2_test.py
 include tests/pattern.txt
 include tests/sub.txt
 include tests/unicode.txt
