@@ -18,8 +18,6 @@ include tests/split.txt
 include AUTHORS
 include README.rst
 include src/_re2macros.h
-include src/_re2.pxd
 include src/re2.cpp
 include src/re2.pyx
-include MANIFEST
 include setup.py
