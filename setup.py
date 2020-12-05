@@ -120,6 +120,7 @@ def main():
         url='https://github.com/andreasvc/pyre2',
         ext_modules = ext_modules,
         cmdclass=cmdclass,
+        zip_safe=False,
         classifiers = [
             'License :: OSI Approved :: BSD License',
             'Programming Language :: Cython',

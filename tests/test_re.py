@@ -442,19 +442,21 @@ class ReTests(unittest.TestCase):
 
     def test_pickling(self):
         import pickle
-        self.pickle_test(pickle)
+
+        def pickle_test(pickle):
+            oldpat = re.compile('a(?:b|(c|e){1,2}?|d)+?(.)')
+            s = pickle.dumps(oldpat)
+            newpat = pickle.loads(s)
+            self.assertEqual(oldpat, newpat)
+
+        pickle_test(pickle)
+
         try:
             import cPickle as pickle
         except ImportError:
             pass
         else:
-            self.pickle_test(pickle)
-
-    def pickle_test(self, pickle):
-        oldpat = re.compile('a(?:b|(c|e){1,2}?|d)+?(.)')
-        s = pickle.dumps(oldpat)
-        newpat = pickle.loads(s)
-        self.assertEqual(oldpat, newpat)
+            pickle_test(pickle)
 
     def test_constants(self):
         self.assertEqual(re.I, re.IGNORECASE)
@@ -685,9 +687,13 @@ class ReTests(unittest.TestCase):
 
 
 def run_re_tests():
-    from re_tests import benchmarks, tests, SUCCEED, FAIL, SYNTAX_ERROR
+    try:
+        from tests.re_tests import benchmarks, tests, SUCCEED, FAIL, SYNTAX_ERROR
+    except ImportError:
+        from re_tests import benchmarks, tests, SUCCEED, FAIL, SYNTAX_ERROR
+
     if verbose:
-        print('Running re_tests test suite')
+        print('\nRunning re_tests test suite')
     else:
         # To save time, only run the first and last 10 tests
         #tests = tests[:10] + tests[-10:]
@@ -802,9 +808,6 @@ def run_re_tests():
                 if result is None:
                     print('=== Fails on unicode-sensitive match', t)
 
-def test_main():
-    run_unittest(ReTests)
-    run_re_tests()
 
 if __name__ == "__main__":
-    test_main()
+    unittest.main()
