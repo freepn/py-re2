@@ -9,6 +9,7 @@ jobs:
     env:
       MANYLINUX2010_X86_64_TAG: "2020-12-03-912b0de"
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-20.04, macos-latest]
 
