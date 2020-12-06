@@ -1,17 +1,27 @@
 name: Build
 
-on: [push, pull_request]
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - master
 
 jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }} for Python
     runs-on: ${{ matrix.os }}
+    env:
+      MANYLINUX2010_X86_64_TAG: "2020-12-03-912b0de"
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-18.04, macos-latest]
+        os: [ubuntu-20.04, macos-latest]
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v2
         name: Install Python
@@ -20,7 +30,7 @@ jobs:
 
       - name: Install cibuildwheel
         run: |
-          python -m pip install cibuildwheel==1.6.3
+          python -m pip install cibuildwheel==1.7.1
 
       - name: Install Visual C++ for Python 2.7
         if: runner.os == 'Windows'
@@ -29,7 +39,9 @@ jobs:
 
       - name: Build wheels
         env:
-          CIBW_BEFORE_ALL_LINUX: yum install -y re2-devel
+          CIBW_BEFORE_ALL_LINUX: >
+            yum -y -q --enablerepo=extras install epel-release
+            && yum install -y re2-devel
           CIBW_BEFORE_ALL_MACOS: brew install re2
           CIBW_BUILD: cp36-* cp37-* cp38-*
         run: |
@@ -59,21 +71,17 @@ jobs:
         with:
           path: dist/*.tar.gz
 
-  upload_pypi:
+  release:
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
     # upload to PyPI on every tag starting with 'v'
-    if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
+    # if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
     # alternatively, to publish when a GitHub Release is created, use the following rule:
-    # if: github.event_name == 'release' && github.event.action == 'published'
+    if: github.event_name == 'release' && github.event.action == 'published'
     steps:
-      - uses: actions/download-artifact@v2
-        with:
-          name: artifact
-          path: dist
-
-      - uses: pypa/gh-action-pypi-publish@master
-        with:
-          user: __token__
-          password: ${{ secrets.pypi_password }}
-
+      - name: install gitchangelog
+        run: |
+          pip install git+https://github.com/freepn/gitchangelog@3.0.4-2
+      - name: generate change file
+        run: |
+          bash -c 'gitchangelog $(git tag -l | tail -n2 | head -n1)..$(git describe --abbrev=0) > CHANGES.md'
