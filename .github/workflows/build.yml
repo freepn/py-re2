@@ -20,8 +20,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
 
       - uses: actions/setup-python@v2
         name: Install Python
@@ -53,7 +51,7 @@ jobs:
 
   build_sdist:
     name: Build source distribution
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
 
@@ -67,21 +65,63 @@ jobs:
           pip install --user cython
           python setup.py sdist
 
-      - uses: actions/upload-artifact@v2
-        with:
-          path: dist/*.tar.gz
+  check_artifacts:
+    name: Check artifacts are correct
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
 
-  release:
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: '3.7'
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: wheels
+          
+      - name: Display structure of downloaded artifacts
+        run: ls -R
+
+  do_release:
     needs: [build_wheels, build_sdist]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     # upload to PyPI on every tag starting with 'v'
     # if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
     # alternatively, to publish when a GitHub Release is created, use the following rule:
     if: github.event_name == 'release' && github.event.action == 'published'
     steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: '3.7'
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: wheels
+          path: artifacts/ats-cmb
+
       - name: install gitchangelog
         run: |
           pip install git+https://github.com/freepn/gitchangelog@3.0.4-2
+
       - name: generate change file
         run: |
           bash -c 'gitchangelog $(git tag -l | tail -n2 | head -n1)..$(git describe --abbrev=0) > CHANGES.md'
+
+      - name: create release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body_path: CHANGES.md
+          draft: false
+          prerelease: false
+          files: ./wheelhouse/*.whl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
