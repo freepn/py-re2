@@ -123,6 +123,6 @@ jobs:
           body_path: CHANGES.md
           draft: false
           prerelease: false
-          files: *.whl
+          files: py_re2*.whl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
