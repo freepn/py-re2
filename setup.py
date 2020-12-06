@@ -110,7 +110,7 @@ def main():
             })
     setup(
         name='py-re2',
-        version='0.3.1',
+        version='0.3.1-1',
         description='Python wrapper for Google\'s RE2 using Cython',
         long_description=get_long_description(),
 	long_description_content_type='text/x-rst',

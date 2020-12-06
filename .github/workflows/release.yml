@@ -1,13 +1,13 @@
-name: wheels
+name: Release
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - master
+    # release on tag push
+    tags:
+      - '*'
 
 jobs:
-  build_wheels:
+  create_wheels:
     name: Build wheels on ${{ matrix.os }} for Python
     runs-on: ${{ matrix.os }}
     env:
@@ -46,31 +46,48 @@ jobs:
           name: wheels
           path: ./wheelhouse/*.whl
 
-  build_sdist:
-    name: Build source distribution
+  create_release:
+    name: Create Release
+    needs: [create_wheels]
     runs-on: ubuntu-20.04
+
     steps:
+      - name: Get version
+        id: get_version
+        run: |
+          echo "VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
+          echo ${{ env.VERSION }}
+
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v2
         name: Install Python
         with:
-          python-version: '3.7'
+          python-version: 3.7
 
-      - name: Build sdist
-        run: |
-          pip install --user cython
-          python setup.py sdist
-
-  check_artifacts:
-    name: Check artifacts are correct
-    needs: [build_wheels]
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
         with:
           name: wheels
-          
-      - name: Check number of downloaded artifacts
-        run: .github/workflows/wheel-check.sh 9
+
+      - name: Install gitchangelog
+        run: |
+          pip install git+https://github.com/freepn/gitchangelog@3.0.4-2
+
+      - name: Generate changes file
+        run: |
+          bash -c 'gitchangelog $(git tag -l | tail -n2 | head -n1)..${{ env.VERSION }} > CHANGES.md'
+
+      - name: Create draft release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: Release v${{ env.VERSION }}
+          body_path: CHANGES.md
+          draft: true
+          prerelease: false
+          files: ./py_re2*.whl
