@@ -78,8 +78,6 @@ jobs:
           python-version: '3.7'
 
       - uses: actions/download-artifact@v2
-        with:
-          name: wheels
           
       - name: Display structure of downloaded artifacts
         run: ls -R
@@ -102,9 +100,6 @@ jobs:
           python-version: '3.7'
 
       - uses: actions/download-artifact@v2
-        with:
-          name: wheels
-          path: artifacts/ats-cmb
 
       - name: install gitchangelog
         run: |
