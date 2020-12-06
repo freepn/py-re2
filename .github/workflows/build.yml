@@ -83,7 +83,7 @@ jobs:
           name: wheels
           
       - name: Display structure of downloaded artifacts
-        run: ls -R
+        run: .github/workflows/wheel-check.sh
 
   do_release:
     needs: [build_wheels, build_sdist]
@@ -123,6 +123,6 @@ jobs:
           body_path: CHANGES.md
           draft: false
           prerelease: false
-          files: ./wheels/*.whl
+          files: *.whl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
