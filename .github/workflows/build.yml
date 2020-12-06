@@ -1,5 +1,6 @@
 name: Build
 
+on:
   workflow_dispatch:
   pull_request:
   push:
@@ -12,8 +13,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       MANYLINUX2010_X86_64_TAG: "2020-12-03-912b0de"
-      MANYLINUX2014_AARCH64_TAG: "2020-11-11-bc8ce45"
-      MANYLINUX2014_PPC64LE_TAG: "2020-11-11-bc8ce45"
     strategy:
       fail-fast: false
       matrix:
@@ -21,6 +20,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v2
         name: Install Python
@@ -70,21 +71,17 @@ jobs:
         with:
           path: dist/*.tar.gz
 
-  upload_pypi:
+  release:
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
     # upload to PyPI on every tag starting with 'v'
-    if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
+    # if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
     # alternatively, to publish when a GitHub Release is created, use the following rule:
-    # if: github.event_name == 'release' && github.event.action == 'published'
+    if: github.event_name == 'release' && github.event.action == 'published'
     steps:
-      - uses: actions/download-artifact@v2
-        with:
-          name: artifact
-          path: dist
-
-      - uses: pypa/gh-action-pypi-publish@master
-        with:
-          user: __token__
-          password: ${{ secrets.pypi_password }}
-
+      - name: install gitchangelog
+        run: |
+          pip install git+https://github.com/freepn/gitchangelog@3.0.4-2
+      - name: generate change file
+        run: |
+          bash -c 'gitchangelog $(git tag -l | tail -n2 | head -n1)..$(git describe --abbrev=0) > CHANGES.md'
