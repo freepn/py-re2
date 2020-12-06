@@ -47,6 +47,7 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
+          name: wheels
           path: ./wheelhouse/*.whl
 
   build_sdist:
@@ -78,6 +79,8 @@ jobs:
           python-version: '3.7'
 
       - uses: actions/download-artifact@v2
+        with:
+          name: wheels
           
       - name: Display structure of downloaded artifacts
         run: ls -R
@@ -100,6 +103,8 @@ jobs:
           python-version: '3.7'
 
       - uses: actions/download-artifact@v2
+        with:
+          name: wheels
 
       - name: install gitchangelog
         run: |
@@ -118,6 +123,6 @@ jobs:
           body_path: CHANGES.md
           draft: false
           prerelease: false
-          files: ./wheelhouse/*.whl
+          files: ./wheels/*.whl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
