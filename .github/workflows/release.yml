@@ -71,11 +71,13 @@ jobs:
         with:
           name: wheels
 
-      - name: Generate changelog
-        id: changelog
-        uses: metcalfc/changelog-generator@v0.4.4
-        with:
-          myToken: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install gitchangelog
+        run: |
+          pip install git+https://github.com/freepn/gitchangelog@3.0.4-2
+
+      - name: Generate changes file
+        run: |
+          bash -c 'gitchangelog $(git tag -l | tail -n2 | head -n1)..${{ env.VERSION }} > CHANGES.md'
 
       - name: Create draft release
         id: create_release
@@ -85,11 +87,7 @@ jobs:
         with:
           tag_name: ${{ env.VERSION }}
           name: Release v${{ env.VERSION }}
+          body_path: CHANGES.md
           draft: false
           prerelease: false
           files: ./py_re2*.whl
-          body: |
-            ## Release
-            py-re2 v${{ env.VERSION }}
-            Changelog:
-            ${{ steps.changelog.outputs.changelog }}
