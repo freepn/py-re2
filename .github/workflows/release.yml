@@ -62,6 +62,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      # somehow gitchangelog cannot see the local tag
+      - run: |
+          git describe --tags
+          #git fetch --tags
+
       - uses: actions/setup-python@v2
         name: Install Python
         with:
@@ -73,11 +78,11 @@ jobs:
 
       - name: Install gitchangelog
         run: |
-          pip install git+https://github.com/freepn/gitchangelog@3.0.4-2
+          pip install git+https://github.com/freepn/gitchangelog@3.0.4-4
 
       - name: Generate changes file
         run: |
-          bash -c 'gitchangelog $(git tag -l | tail -n2 | head -n1)..${{ env.VERSION }} > CHANGES.md'
+          bash -c 'gitchangelog $(git tag --sort=taggerdate | tail -n2 | head -n1)..${{ env.VERSION }} > CHANGES.md'
 
       - name: Create draft release
         id: create_release
