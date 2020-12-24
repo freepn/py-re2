@@ -62,11 +62,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      # somehow gitchangelog cannot see the local tag
-      - run: |
-          git describe --tags
-          #git fetch --tags
-
       - uses: actions/setup-python@v2
         name: Install Python
         with:
