@@ -1,135 +1,138 @@
 # -*- coding: utf-8 -*-
 #
 
-import io
 import os
-import re
 import sys
-import platform
-from setuptools import setup
-from distutils.core import Command, Extension
+import subprocess
 
-MINIMUM_CYTHON_VERSION = '0.20'
-BASE_DIR = os.path.dirname(__file__)
-PY2 = sys.version_info[0] == 2
-DEBUG = False
+from setuptools import setup, Extension
+from setuptools.command.build_ext import build_ext
 
-class TestCommand(Command):
-    description = 'Run packaged tests'
-    user_options = []
-    def initialize_options(self):
-        pass
+# Convert distutils Windows platform specifiers to CMake -A arguments
+PLAT_TO_CMAKE = {
+    "win32": "Win32",
+    "win-amd64": "x64",
+    "win-arm32": "ARM",
+    "win-arm64": "ARM64",
+}
 
-    def finalize_options(self):
-        pass
+fallback_ver = '0.3.2-1'
 
+# A CMakeExtension needs a sourcedir instead of a file list.
+class CMakeExtension(Extension):
+    def __init__(self, name, sourcedir=""):
+        Extension.__init__(self, name, sources=[])
+        self.sourcedir = os.path.abspath(sourcedir)
+
+
+class CMakeBuild(build_ext):
     def run(self):
-        from tests import re2_test
-        re2_test.testall()
+        # This is optional - will print a nicer error if CMake is missing.
+        # Since we force CMake via PEP 518 in the pyproject.toml, this should
+        # never happen and this whole method can be removed in your code if you
+        # want.
+        try:
+            subprocess.check_output(["cmake", "--version"])
+        except OSError:
+            msg = "CMake missing - probably upgrade to a newer version of Pip?"
+            raise RuntimeError(msg)
 
+        # To support Python 2, we have to avoid super(), since distutils is all
+        # old-style classes.
+        build_ext.run(self)
 
-def majorminor(version):
-    return [int(x) for x in re.match(r'([0-9]+)\.([0-9]+)', version).groups()]
+    def build_extension(self, ext):
+        extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
 
-cmdclass = {'test': TestCommand}
+        # required for auto-detection of auxiliary "native" libs
+        if not extdir.endswith(os.path.sep):
+            extdir += os.path.sep
 
-ext_files = []
-if '--cython' in sys.argv or not os.path.exists('src/re2.cpp'):
-    # Using Cython
-    try:
-        sys.argv.remove('--cython')
-    except ValueError:
-        pass
-    from Cython.Compiler.Main import Version
-    if majorminor(MINIMUM_CYTHON_VERSION) >= majorminor(Version.version):
-        raise ValueError('Cython is version %s, but needs to be at least %s.'
-                % (Version.version, MINIMUM_CYTHON_VERSION))
-    from Cython.Distutils import build_ext
-    from Cython.Build import cythonize
-    cmdclass['build_ext'] = build_ext
-    use_cython = True
-else:
-    # Building from C
-    ext_files.append('src/re2.cpp')
-    use_cython = False
+        # Set a sensible default build type for packaging
+        if "CMAKE_BUILD_OVERRIDE" not in os.environ:
+            cfg = "Debug" if self.debug else "RelWithDebInfo"
+        else:
+            cfg = os.environ.get("CMAKE_BUILD_OVERRIDE", "")
 
+        # CMake lets you override the generator - we need to check this.
+        # Can be set with Conda-Build, for example.
+        cmake_generator = os.environ.get("CMAKE_GENERATOR", "")
 
-# Locate the re2 module
-_re2_prefixes = ['/usr', '/usr/local', '/opt/', '/opt/local', os.environ.get('HOME', '') + '/.local']
+        # Set Python_EXECUTABLE instead if you use PYBIND11_FINDPYTHON
+        # SCM_VERSION_INFO shows you how to pass a value into the C++ code
+        # from Python.
+        cmake_args = [
+            "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={}".format(extdir),
+            "-DPYTHON_EXECUTABLE={}".format(sys.executable),
+            "-DSCM_VERSION_INFO={}".format(fallback_ver),
+            "-DCMAKE_BUILD_TYPE={}".format(cfg),  # not used on MSVC, but no harm
+        ]
+        build_args = ["--verbose"]
 
-re2_prefix = ''
-for a in _re2_prefixes:
-    if os.path.exists(os.path.join(a, 'include', 're2')):
-        re2_prefix = a
-        break
+        # CMake also lets you provide a toolchain file.
+        # Can be set in CI build environments for example.
+        cmake_toolchain_file = os.environ.get("CMAKE_TOOLCHAIN_FILE", "")
+        if cmake_toolchain_file:
+            cmake_args += ["-DCMAKE_TOOLCHAIN_FILE={}".format(cmake_toolchain_file)]
 
-def get_long_description():
-    with io.open(os.path.join(BASE_DIR, 'README.rst'), encoding='utf8') as inp:
-        return inp.read()
+        if self.compiler.compiler_type != "msvc":
+            # Using Ninja-build since it a) is available as a wheel and b)
+            # multithreads automatically. MSVC would require all variables be
+            # exported for Ninja to pick it up, which is a little tricky to do.
+            # Users can override the generator with CMAKE_GENERATOR in CMake
+            # 3.15+.
+            if not cmake_generator:
+                cmake_args += ["-GNinja"]
 
-def get_authors():
-    author_re = re.compile(r'^\s*(.*?)\s+<.*?\@.*?>', re.M)
-    authors_f = open(os.path.join(BASE_DIR, 'AUTHORS'))
-    authors = [match.group(1) for match in author_re.finditer(authors_f.read())]
-    authors_f.close()
-    return ', '.join(authors)
+        else:
 
-def main():
-    os.environ['GCC_COLORS'] = 'auto'
-    include_dirs = [os.path.join(re2_prefix, 'include')] if re2_prefix else []
-    libraries = ['re2']
-    library_dirs = [os.path.join(re2_prefix, 'lib')] if re2_prefix else []
-    runtime_library_dirs = [os.path.join(re2_prefix, 'lib')
-            ] if re2_prefix else []
-    extra_compile_args = ['-O0', '-g'] if DEBUG else [
-            '-O3', '-march=native', '-DNDEBUG']
-    # Older GCC version such as on CentOS 6 do not support C++11
-    if not platform.python_compiler().startswith('GCC 4.4.7'):
-        extra_compile_args.append('-std=c++11')
-    ext_modules = [
-        Extension(
-            're2',
-            sources=['src/re2.pyx' if use_cython else 'src/re2.cpp'],
-            language='c++',
-            include_dirs=include_dirs,
-            libraries=libraries,
-            library_dirs=library_dirs,
-            runtime_library_dirs=runtime_library_dirs,
-            extra_compile_args=['-DPY2=%d' % PY2] + extra_compile_args,
-            extra_link_args=['-g'] if DEBUG else ['-DNDEBUG'],
-        )]
-    if use_cython:
-        ext_modules = cythonize(
-            ext_modules,
-            language_level=3,
-            annotate=True,
-            compiler_directives={
-                'embedsignature': True,
-                'warn.unused': True,
-                'warn.unreachable': True,
-            })
-    setup(
-        name='pyre2',
-        version='0.3.2',
-        description='Python wrapper for Google\'s RE2 using Cython',
-        long_description=get_long_description(),
-	long_description_content_type='text/x-rst',
-        author=get_authors(),
-        license='New BSD License',
-        author_email='andreas@unstable.nl',
-        url='https://github.com/andreasvc/pyre2',
-        ext_modules = ext_modules,
-        cmdclass=cmdclass,
-        zip_safe=False,
-        classifiers = [
-            'License :: OSI Approved :: BSD License',
-            'Programming Language :: Cython',
-            'Programming Language :: Python :: 2.6',
-            'Programming Language :: Python :: 3.3',
-            'Intended Audience :: Developers',
-            'Topic :: Software Development :: Libraries :: Python Modules',
-            ],
+            # Single config generators are handled "normally"
+            single_config = any(x in cmake_generator for x in {"NMake", "Ninja"})
+
+            # CMake allows an arch-in-generator style for backward compatibility
+            contains_arch = any(x in cmake_generator for x in {"ARM", "Win64"})
+
+            # Specify the arch if using MSVC generator, but only if it doesn't
+            # contain a backward-compatibility arch spec already in the
+            # generator name.
+            if not single_config and not contains_arch:
+                cmake_args += ["-A", PLAT_TO_CMAKE[self.plat_name]]
+
+            # Multi-config generators have a different way to specify configs
+            if not single_config:
+                cmake_args += [
+                    "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}".format(cfg.upper(), extdir)
+                ]
+                build_args += ["--config", cfg]
+
+        # Set CMAKE_BUILD_PARALLEL_LEVEL to control the parallel build level
+        # across all generators.
+        if "CMAKE_BUILD_PARALLEL_LEVEL" not in os.environ:
+            # self.parallel is a Python 3 only way to set parallel jobs by hand
+            # using -j in the build_ext call, not supported by pip or PyPA-build.
+            if hasattr(self, "parallel") and self.parallel:
+                # CMake 3.12+ only.
+                build_args += ["-j{}".format(self.parallel)]
+
+        if not os.path.exists(self.build_temp):
+            os.makedirs(self.build_temp)
+
+        subprocess.check_call(
+            ["cmake", ext.sourcedir] + cmake_args, cwd=self.build_temp
+        )
+        subprocess.check_call(
+            ["cmake", "--build", "."] + build_args, cwd=self.build_temp
         )
 
-if __name__ == '__main__':
-    main()
+
+setup(
+    use_scm_version={'root': '.',
+                     'relative_to': __file__,
+                     'fallback_version': fallback_ver,
+                     'version_scheme': 'no-guess-dev',
+                     },
+    setup_requires=['setuptools_scm'],
+    ext_modules=[CMakeExtension('re2')],
+    cmdclass={'build_ext': CMakeBuild},
+    zip_safe=False,
+)

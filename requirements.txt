@@ -1,0 +1,3 @@
+cython>=0.29.21
+cmake>=3.12
+ninja
