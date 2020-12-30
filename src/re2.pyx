@@ -1,4 +1,10 @@
+# cython: language=c++
+# cython: language_level=3
+# cython: embedsignature=True
+# cython: warn.unused=True
+# cython: warn.unreachable=True
 # cython: infer_types(False)
+
 r"""Regular expressions using Google's RE2 engine.
 
 Compared to Python's ``re``, the RE2 engine compiles regular expressions to

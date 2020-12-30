@@ -6,6 +6,7 @@ requires = [
     "cython>=0.29.21",
     "ninja; sys_platform != 'Windows'",
     "cmake>=3.12",
+    "pybind11>=2.6.0",
 ]
 
 build-backend = "setuptools.build_meta"
