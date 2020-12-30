@@ -12,23 +12,13 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL Clang)
   set(CLANG_DEFAULT_RTLIB compiler-rt)
 endif()
 
-#find_package(PythonInterp)
-#find_package(PythonLibs)
-# find_package(PythonExtensions)
+find_package(re2 REQUIRED CONFIG)
 
-#find_package(re2 CONFIG REQUIRED NAMES re2)
-#find_package(Threads REQUIRED)
+get_target_property(include_dirs re2::re2 INTERFACE_INCLUDE_DIRECTORIES)
+message("re2_include_dirs=${include_dirs}")
 
-#find_package(pybind11 CONFIG REQUIRED)
-#set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_LIST_DIR}/CMake)
-##find_package(PythonLibs REQUIRED)
-#find_package(Cython)
-
-#include_directories(SYSTEM ${PYTHON_INCLUDE_DIR})
-#include_directories(${pybind11_INCLUDE_DIR} ${PYTHON_INCLUDE_DIRS})
-#include_directories(${PROJECT_SOURCE_DIR}/src)
-add_subdirectory(src)
-
+get_target_property(link_libraries re2::re2 INTERFACE_LINK_LIBRARIES)
+message("re2_extra_objects=${link_libraries}")
 
 message(STATUS "Set CMAKE_BUILD_OVERRIDE to change build type.")
 message(STATUS "<<< Build configuration >>>

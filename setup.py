@@ -1,138 +1,100 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
+# Adapted from:
+#   https://git.sr.ht/~cnx/palace/tree/main/item/setup.py
+#   Copyright (C) 2019, 2020  Nguyễn Gia Phong
+#   Copyright (C) 2020  Francesco Caliumi
+#
 
-import os
+import re
 import sys
-import subprocess
 
+from distutils import log
+from distutils.command.clean import clean
+from distutils.dir_util import mkpath
+from distutils.errors import DistutilsExecError, DistutilsFileError
+from distutils.file_util import copy_file
+from operator import methodcaller
+from os import environ, unlink
+from os.path import dirname, join
+from platform import system
+from subprocess import DEVNULL, PIPE, run, CalledProcessError
+
+from Cython.Build import cythonize
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 
-# Convert distutils Windows platform specifiers to CMake -A arguments
-PLAT_TO_CMAKE = {
-    "win32": "Win32",
-    "win-amd64": "x64",
-    "win-arm32": "ARM",
-    "win-arm64": "ARM64",
-}
+PY2 = sys.version_info[0] == 2
 
 fallback_ver = '0.3.2-1'
 
-# A CMakeExtension needs a sourcedir instead of a file list.
-class CMakeExtension(Extension):
-    def __init__(self, name, sourcedir=""):
-        Extension.__init__(self, name, sources=[])
-        self.sourcedir = os.path.abspath(sourcedir)
+try:
+    TRACE = int(environ['CYTHON_TRACE'])
+except KeyError:
+    TRACE = 0
+except ValueError:
+    TRACE = 0
+
+
+def src(file: str) -> str:
+    """Return path to the given file in src."""
+    return join(dirname(__file__), 'src', file)
 
 
 class CMakeBuild(build_ext):
-    def run(self):
-        # This is optional - will print a nicer error if CMake is missing.
-        # Since we force CMake via PEP 518 in the pyproject.toml, this should
-        # never happen and this whole method can be removed in your code if you
-        # want.
+    """CMake extension builder and process runner."""
+    def finalize_options(self) -> None:
+        super().finalize_options()
+        mkpath(self.build_temp)
+        copy_file(join(dirname(__file__), 'CMakeLists.txt'), self.build_temp)
         try:
-            subprocess.check_output(["cmake", "--version"])
-        except OSError:
-            msg = "CMake missing - probably upgrade to a newer version of Pip?"
-            raise RuntimeError(msg)
+            cmake = run(
+                ['cmake', '.'], check=True, stdout=DEVNULL, stderr=PIPE,
+                cwd=self.build_temp, universal_newlines=True)
+        except CalledProcessError as e:
+            log.error(e.stderr.strip())
+            raise DistutilsExecError(str(e))
 
-        # To support Python 2, we have to avoid super(), since distutils is all
-        # old-style classes.
-        build_ext.run(self)
-
-    def build_extension(self, ext):
-        extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
-
-        # required for auto-detection of auxiliary "native" libs
-        if not extdir.endswith(os.path.sep):
-            extdir += os.path.sep
-
-        # Set a sensible default build type for packaging
-        if "CMAKE_BUILD_OVERRIDE" not in os.environ:
-            cfg = "Debug" if self.debug else "RelWithDebInfo"
-        else:
-            cfg = os.environ.get("CMAKE_BUILD_OVERRIDE", "")
-
-        # CMake lets you override the generator - we need to check this.
-        # Can be set with Conda-Build, for example.
-        cmake_generator = os.environ.get("CMAKE_GENERATOR", "")
-
-        # Set Python_EXECUTABLE instead if you use PYBIND11_FINDPYTHON
-        # SCM_VERSION_INFO shows you how to pass a value into the C++ code
-        # from Python.
-        cmake_args = [
-            "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={}".format(extdir),
-            "-DPYTHON_EXECUTABLE={}".format(sys.executable),
-            "-DSCM_VERSION_INFO={}".format(fallback_ver),
-            "-DCMAKE_BUILD_TYPE={}".format(cfg),  # not used on MSVC, but no harm
-        ]
-        build_args = ["--verbose"]
-
-        # CMake also lets you provide a toolchain file.
-        # Can be set in CI build environments for example.
-        cmake_toolchain_file = os.environ.get("CMAKE_TOOLCHAIN_FILE", "")
-        if cmake_toolchain_file:
-            cmake_args += ["-DCMAKE_TOOLCHAIN_FILE={}".format(cmake_toolchain_file)]
-
-        if self.compiler.compiler_type != "msvc":
-            # Using Ninja-build since it a) is available as a wheel and b)
-            # multithreads automatically. MSVC would require all variables be
-            # exported for Ninja to pick it up, which is a little tricky to do.
-            # Users can override the generator with CMAKE_GENERATOR in CMake
-            # 3.15+.
-            if not cmake_generator:
-                cmake_args += ["-GNinja"]
-
-        else:
-
-            # Single config generators are handled "normally"
-            single_config = any(x in cmake_generator for x in {"NMake", "Ninja"})
-
-            # CMake allows an arch-in-generator style for backward compatibility
-            contains_arch = any(x in cmake_generator for x in {"ARM", "Win64"})
-
-            # Specify the arch if using MSVC generator, but only if it doesn't
-            # contain a backward-compatibility arch spec already in the
-            # generator name.
-            if not single_config and not contains_arch:
-                cmake_args += ["-A", PLAT_TO_CMAKE[self.plat_name]]
-
-            # Multi-config generators have a different way to specify configs
-            if not single_config:
-                cmake_args += [
-                    "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}".format(cfg.upper(), extdir)
-                ]
-                build_args += ["--config", cfg]
-
-        # Set CMAKE_BUILD_PARALLEL_LEVEL to control the parallel build level
-        # across all generators.
-        if "CMAKE_BUILD_PARALLEL_LEVEL" not in os.environ:
-            # self.parallel is a Python 3 only way to set parallel jobs by hand
-            # using -j in the build_ext call, not supported by pip or PyPA-build.
-            if hasattr(self, "parallel") and self.parallel:
-                # CMake 3.12+ only.
-                build_args += ["-j{}".format(self.parallel)]
-
-        if not os.path.exists(self.build_temp):
-            os.makedirs(self.build_temp)
-
-        subprocess.check_call(
-            ["cmake", ext.sourcedir] + cmake_args, cwd=self.build_temp
-        )
-        subprocess.check_call(
-            ["cmake", "--build", "."] + build_args, cwd=self.build_temp
-        )
+        for key, value in map(methodcaller('groups'),
+                              re.finditer(r'^re2_(\w*)=(.*)$',
+                                          cmake.stderr, re.MULTILINE)):
+            for ext in self.extensions:
+                getattr(ext, key).extend(value.split(';'))
 
 
-setup(
-    use_scm_version={'root': '.',
-                     'relative_to': __file__,
-                     'fallback_version': fallback_ver,
-                     'version_scheme': 'no-guess-dev',
-                     },
-    setup_requires=['setuptools_scm'],
-    ext_modules=[CMakeExtension('re2')],
-    cmdclass={'build_ext': CMakeBuild},
-    zip_safe=False,
+class CleanCpp(clean):
+    """Remove Cython C++ outputs on clean command."""
+    def run(self) -> None:
+        for cpp in [src('re2.cpp')]:
+            log.info(f'removing {cpp!r}')
+            try:
+                unlink(cpp)
+            except OSError as e:
+                raise DistutilsFileError(
+                    f'could not delete {cpp!r}: {e.strerror}')
+        super().run()
+
+
+setup(cmdclass=dict(build_ext=CMakeBuild, clean=CleanCpp),
+      ext_modules=cythonize(
+          Extension(name='re2', sources=[src('re2.pyx')],
+                    define_macros=[('CYTHON_TRACE', TRACE)],
+                    extra_compile_args=['-DPY2=%d' % PY2],
+                    libraries=['re2'],
+                    language='c++'),
+          compiler_directives={
+              'binding': True,
+              'linetrace': TRACE,
+              'language_level': '3',
+              'embedsignature': True,
+              'warn.unused': True,
+              'warn.unreachable': True
+          }),
+      use_scm_version={'root': '.',
+          'relative_to': __file__,
+          'fallback_version': fallback_ver,
+          'version_scheme': 'post-release',
+      },
+      setup_requires=['setuptools_scm'],
 )

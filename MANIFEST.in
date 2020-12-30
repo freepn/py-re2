@@ -1,9 +1,10 @@
 include AUTHORS README.rst HISTORY CHANGELOG.rst
-global-include CMakeLists.txt *.cmake
+include CMakeLists.txt
+recursive-include src *.h *.pxi *.pyx
+include tox.ini
 include *.py
 include *.cfg
 include *.toml
-graft src
 graft tests
 exclude .tox
 exclude .git*
