@@ -1,3 +1,5 @@
+#set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # this looks outside tox venv and finds python39 (which is not active)
 #find_package(Python REQUIRED)
 set(cython_module re2)
