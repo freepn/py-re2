@@ -1,11 +1,9 @@
+global-include CMakeLists.txt *.cmake
 include AUTHORS README.rst HISTORY CHANGELOG.rst
-include CMakeLists.txt
+include *.py *.cfg *.toml *.rst *.in
 recursive-include src *.h *.pxi *.pyx
+recursive-include tests *.py *.txt *.dat *.gz
 include tox.ini
-include *.py
-include *.cfg
-include *.toml
-graft tests
-exclude .tox
-exclude .git*
-
+recursive-exclude .tox *
+recursive-exclude .git *
+recursive-exclude .github *

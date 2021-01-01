@@ -14,7 +14,6 @@ from distutils import log
 from distutils.command.clean import clean
 from distutils.dir_util import mkpath
 from distutils.errors import DistutilsExecError, DistutilsFileError
-from distutils.file_util import copy_file
 from operator import methodcaller
 from os import environ, unlink
 from os.path import dirname, join
@@ -25,9 +24,9 @@ from Cython.Build import cythonize
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 
+CPPSTD = '/std:c++11' if system() == 'Windows' else '-std=c++11'
 PY2 = sys.version_info[0] == 2
-
-fallback_ver = '0.3.2-1'
+fallback_ver = '0.3.2'
 
 try:
     TRACE = int(environ['CYTHON_TRACE'])
@@ -47,10 +46,9 @@ class CMakeBuild(build_ext):
     def finalize_options(self) -> None:
         super().finalize_options()
         mkpath(self.build_temp)
-        copy_file(join(dirname(__file__), 'CMakeLists.txt'), self.build_temp)
         try:
             cmake = run(
-                ['cmake', '.'], check=True, stdout=DEVNULL, stderr=PIPE,
+                ['cmake', '../..'], check=True, stdout=DEVNULL, stderr=PIPE,
                 cwd=self.build_temp, universal_newlines=True)
         except CalledProcessError as e:
             log.error(e.stderr.strip())
@@ -80,7 +78,7 @@ setup(cmdclass=dict(build_ext=CMakeBuild, clean=CleanCpp),
       ext_modules=cythonize(
           Extension(name='re2', sources=[src('re2.pyx')],
                     define_macros=[('CYTHON_TRACE', TRACE)],
-                    extra_compile_args=['-DPY2=%d' % PY2],
+                    extra_compile_args=[CPPSTD, '-DPY2=%d' % PY2],
                     libraries=['re2'],
                     language='c++'),
           compiler_directives={
