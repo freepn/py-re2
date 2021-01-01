@@ -22,5 +22,5 @@ except ImportError:
 
 setup(
     cmake_install_dir='.',
-    #cmake_args=["-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",],
+    cmake_args=['-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON',],
 )
