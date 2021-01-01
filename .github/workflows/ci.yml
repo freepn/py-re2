@@ -59,6 +59,7 @@ jobs:
     - name: Install deps with brew
       run: |
         brew install -s re2
+        brew install ninja
       if: startsWith(matrix.os, 'mac')
     - name: Install PPA and build deps
       if: runner.os == 'Linux'

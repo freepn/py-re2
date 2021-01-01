@@ -10,3 +10,4 @@ recursive-include tests *.py *.txt *.dat *.gz
 recursive-exclude .tox *
 recursive-exclude .git *
 recursive-exclude .github *
+recursive-exclude _skbuild *
