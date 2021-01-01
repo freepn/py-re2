@@ -20,7 +20,14 @@ except ImportError:
     raise
 
 
+extra_cmake_args = ['-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON']
+cmake_toolchain_file = os.environ.get('CMAKE_TOOLCHAIN_FILE', '')
+
+if cmake_toolchain_file:
+    extra_cmake_args += ['-DCMAKE_TOOLCHAIN_FILE={}'.format(cmake_toolchain_file)]
+
+
 setup(
     cmake_install_dir='.',
-    cmake_args=['-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON',],
+    cmake_args=extra_cmake_args,
 )

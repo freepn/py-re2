@@ -1,2 +1,5 @@
-cython>=0.29.21
-scikit-build>=0.11.1
+cython
+scikit-build
+nose
+twine
+build
