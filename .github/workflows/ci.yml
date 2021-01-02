@@ -64,6 +64,13 @@ jobs:
         python -m pip install --upgrade pip wheel
         pip install tox
 
+    - name: Set Windows environment variables
+      if: runner.os == 'Windows'
+      run: |
+        .github/workflows/vs_env.bat x64
+        source env.sh
+        echo "CMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake" >> $GITHUB_ENV
+
     - name: Test in place
       run: |
         tox -e py

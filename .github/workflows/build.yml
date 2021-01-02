@@ -61,16 +61,3 @@ jobs:
         run: |
           pip install --user cython
           python setup.py sdist
-
-  check_artifacts:
-    name: Check artifacts are correct
-    needs: [build_wheels]
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/download-artifact@v2
-        with:
-          name: wheels
-          
-      - name: Check number of downloaded artifacts
-        run: .github/workflows/wheel-check.sh 9

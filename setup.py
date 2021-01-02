@@ -15,6 +15,7 @@ from distutils.command.clean import clean
 from distutils.dir_util import mkpath
 from distutils.errors import DistutilsExecError, DistutilsFileError
 from operator import methodcaller
+from distutils.file_util import copy_file
 from os import environ, unlink
 from os.path import dirname, join
 from platform import system
@@ -36,6 +37,19 @@ except ValueError:
     TRACE = 0
 
 
+def cmd() -> None:
+    """
+    Construct the cmake command plus args.
+    :return: cmd_list
+    """
+    cmd_list = ['cmake', '--log-level=WARNING']
+    toolchain_file = environ.get('CMAKE_TOOLCHAIN_FILE', '')
+    if toolchain_file:
+        cmd_list += ['-DCMAKE_TOOLCHAIN_FILE={}'.format(toolchain_file)]
+    cmd_list += ['.']
+    return cmd_list
+
+
 def src(file: str) -> str:
     """Return path to the given file in src."""
     return join(dirname(__file__), 'src', file)
@@ -45,10 +59,13 @@ class CMakeBuild(build_ext):
     """CMake extension builder and process runner."""
     def finalize_options(self) -> None:
         super().finalize_options()
+        cmake_cmd = cmd()
         mkpath(self.build_temp)
+        copy_file(join(dirname(__file__), 'CMakeLists.txt'), self.build_temp)
         try:
             cmake = run(
-                ['cmake', '../..'], check=True, stdout=DEVNULL, stderr=PIPE,
+                cmake_cmd, check=True,
+                stdout=DEVNULL, stderr=PIPE,
                 cwd=self.build_temp, universal_newlines=True)
         except CalledProcessError as e:
             log.error(e.stderr.strip())
