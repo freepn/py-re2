@@ -40,10 +40,11 @@ add_custom_command(OUTPUT ${cython_output}
                    COMMENT "Cythonizing extension ${cython_src}")
 
 add_library(${cython_module} MODULE ${cython_output})
+set(site_packages "${PYTHON_RELATIVE_SITE_PACKAGES_DIR}")
+list(APPEND CMAKE_PREFIX_PATH "${PYTHON_RELATIVE_SITE_PACKAGES_DIR}")
 
 if (SKBUILD)
   python_extension_module(${cython_module})
-  set(site_packages "${PYTHON_RELATIVE_SITE_PACKAGES_DIR}")
   install(TARGETS ${cython_module} LIBRARY DESTINATION ${site_packages})
 else (SKBUILD)
   set_target_properties(${cython_module} PROPERTIES PREFIX "${PYTHON_MODULE_PREFIX}"
