@@ -81,10 +81,10 @@ jobs:
         .github/workflows/vs_env.bat x64
         source env.sh
         echo "CMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake" >> $GITHUB_ENV
-        echo "PYTHONPATH=${PYTHONPATH}:$GITHUB_WORKSPACE/pyre2/" >> $GITHUB_ENV
     - name: Run tests
       run: |
         python setup.py egg_info
-        python setup.py build_ext --inplace --build-type RelWithDebInfo
+        python setup.py bdist_wheel --build-type RelWithDebInfo
+        pip install --force-reinstall --no-index --find-links=dist/ pyre2
         nosetests -sx tests/re2_test.py
         nosetests -sx tests/test_re.py
