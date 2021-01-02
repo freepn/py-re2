@@ -37,15 +37,21 @@ except ValueError:
     TRACE = 0
 
 
-def cmd() -> None:
+def cmd(cfg) -> None:
     """
     Construct the cmake command plus args.
+    :param cfg: cmake build type
     :return: cmd_list
     """
-    cmd_list = ['cmake', '--log-level=WARNING']
+    cmd_list = ['cmake']
     toolchain_file = environ.get('CMAKE_TOOLCHAIN_FILE', '')
     if toolchain_file:
         cmd_list += ['-DCMAKE_TOOLCHAIN_FILE={}'.format(toolchain_file)]
+    build_type = environ.get('CMAKE_BUILD_TYPE', '')
+    if build_type:
+        cmd_list += ['-DCMAKE_BUILD_TYPE={}'.format(build_type)]
+    else:
+        cmd_list += ['-DCMAKE_BUILD_TYPE={}'.format(cfg)]
     cmd_list += ['.']
     return cmd_list
 
@@ -59,8 +65,9 @@ class CMakeBuild(build_ext):
     """CMake extension builder and process runner."""
     def finalize_options(self) -> None:
         super().finalize_options()
-        cmake_cmd = cmd()
         mkpath(self.build_temp)
+        cfg = "Debug" if self.debug else "Release"
+        cmake_cmd = cmd(cfg)
         copy_file(join(dirname(__file__), 'CMakeLists.txt'), self.build_temp)
         try:
             cmake = run(
