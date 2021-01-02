@@ -45,14 +45,6 @@ jobs:
       with:
         arch: x64
 
-    # This makes two environment variables available in the following step(s)
-    #- name: Set Windows environment variables
-      #if: runner.os == 'Windows'
-      #shell: bash
-      #run: |
-        #echo "DISTUTILS_USE_SDK=1" >> $GITHUB_ENV
-        #echo "MSSdk=1" >> $GITHUB_ENV
-
     - name: Update vcpkg
       run: |
         cd C:\vcpkg
@@ -81,8 +73,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip wheel setuptools
-        pip install --upgrade --upgrade-strategy eager -rrequirements-test.txt
-
+        pip install nose twine build -rrequirements.txt
     # This makes msvc and vcpkg environment variables available in the following step(s)
     - name: Set Windows environment variables
       if: runner.os == 'Windows'
@@ -90,10 +81,10 @@ jobs:
         .github/workflows/vs_env.bat x64
         source env.sh
         echo "CMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake" >> $GITHUB_ENV
-
+        echo "PYTHONPATH=${PYTHONPATH}:$GITHUB_WORKSPACE/" >> $GITHUB_ENV
     - name: Run tests
       run: |
-        python setup.py bdist_wheel
-        pip install --no-index --find-links=dist/ pyre2
+        python setup.py egg_info
+        python setup.py build_ext --inplace --build-type RelWithDebInfo
         nosetests -sx tests/re2_test.py
         nosetests -sx tests/test_re.py
