@@ -14,11 +14,10 @@ if(NOT CMAKE_BUILD_TYPE)
             "Default build type: RelWithDebInfo" FORCE)
 endif()
 
-find_package(re2 CONFIG REQUIRED NAMES re2)
-find_package(Threads REQUIRED)
-
-# this looks outside tox venv and finds python39 (which is not active)
-#find_package(Python REQUIRED)
+if (SKBUILD)
+  find_package(PythonExtensions REQUIRED)
+  find_package(Cython REQUIRED)
+endif(SKBUILD)
 
 set(cython_module re2)
 
@@ -41,7 +40,6 @@ add_custom_command(OUTPUT ${cython_output}
 
 add_library(${cython_module} MODULE ${cython_output})
 set(site_packages "${PYTHON_RELATIVE_SITE_PACKAGES_DIR}")
-list(APPEND CMAKE_PREFIX_PATH "${PYTHON_RELATIVE_SITE_PACKAGES_DIR}")
 
 if (SKBUILD)
   python_extension_module(${cython_module})
