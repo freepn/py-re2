@@ -42,8 +42,15 @@ def cmd(cfg) -> None:
     Construct the cmake command plus args.
     :param cfg: cmake build type
     :return: cmd_list
+    :env vars: optional
+        CMAKE_CACHE_FILE = path to CMakeCache.txt
+        CMAKE_TOOLCHAIN_FILE = path to toolchain.cmake
+        CMAKE_BUILD_TYPE = valid build type (default Release)
     """
     cmd_list = ['cmake']
+    cmake_cache_file = environ.get('CMAKE_CACHE_FILE', '')
+    if cmake_cache_file:
+        cmd_list += ['-C', cmake_cache_file]
     toolchain_file = environ.get('CMAKE_TOOLCHAIN_FILE', '')
     if toolchain_file:
         cmd_list += ['-DCMAKE_TOOLCHAIN_FILE={}'.format(toolchain_file)]
@@ -69,6 +76,7 @@ class CMakeBuild(build_ext):
         cfg = "Debug" if self.debug else "Release"
         cmake_cmd = cmd(cfg)
         copy_file(join(dirname(__file__), 'CMakeLists.txt'), self.build_temp)
+        log.info('using {}'.format(cmake_cmd))
         try:
             cmake = run(
                 cmake_cmd, check=True,

@@ -87,6 +87,7 @@ jobs:
         echo "CMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake" >> $GITHUB_ENV
 
     - name: Test in place
+      if: runner.os != 'Windows'
       run: |
         tox -e py
     - name: Build dist pkgs
