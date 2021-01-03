@@ -1,6 +1,7 @@
 MANIFEST
 /build
 /dist
+/_skbuild
 src/re2.so
 src/re2.cpp
 src/*.html

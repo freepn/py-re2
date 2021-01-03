@@ -1,0 +1,5 @@
+cython
+scikit-build
+nose
+twine
+build
