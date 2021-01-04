@@ -1,6 +1,7 @@
 MANIFEST
 /build
 /dist
+/.eggs
 src/re2.so
 src/re2.cpp
 src/*.html

@@ -1,3 +1,6 @@
 global-include CMakeLists.txt *.cmake
 include AUTHORS README.rst HISTORY CHANGELOG.rst LICENSE
 graft src
+recursive-exclude .tox *
+recursive-exclude .github *
+recursive-exclude vcpkg *
