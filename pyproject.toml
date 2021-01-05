@@ -2,6 +2,12 @@
 requires = [
     "setuptools>=42",
     "wheel",
-    "Cython>=0.20",
+    "setuptools_scm[toml]>=3.4",
+    "cython>=0.29.21",
+    "ninja; sys_platform != 'Windows'",
+    "cmake>=3.12",
 ]
+
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]

@@ -1,135 +1,130 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
+# Adapted from:
+#   https://git.sr.ht/~cnx/palace/tree/main/item/setup.py
+#   Copyright (C) 2019, 2020  Nguyễn Gia Phong
+#   Copyright (C) 2020  Francesco Caliumi
+#
 
-import io
-import os
 import re
 import sys
-import platform
-from setuptools import setup
-from distutils.core import Command, Extension
 
-MINIMUM_CYTHON_VERSION = '0.20'
-BASE_DIR = os.path.dirname(__file__)
+from distutils import log
+from distutils.command.clean import clean
+from distutils.dir_util import mkpath
+from distutils.errors import DistutilsExecError, DistutilsFileError
+from operator import methodcaller
+from distutils.file_util import copy_file
+from os import environ, unlink
+from os.path import dirname, join
+from platform import system
+from subprocess import DEVNULL, PIPE, run, CalledProcessError
+
+from Cython.Build import cythonize
+from setuptools import setup, Extension
+from setuptools.command.build_ext import build_ext
+
+CPPSTD = '/std:c++11' if system() == 'Windows' else '-std=c++11'
 PY2 = sys.version_info[0] == 2
-DEBUG = False
+fallback_ver = '0.3.2'
 
-class TestCommand(Command):
-    description = 'Run packaged tests'
-    user_options = []
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        from tests import re2_test
-        re2_test.testall()
+try:
+    TRACE = int(environ['CYTHON_TRACE'])
+except KeyError:
+    TRACE = 0
+except ValueError:
+    TRACE = 0
 
 
-def majorminor(version):
-    return [int(x) for x in re.match(r'([0-9]+)\.([0-9]+)', version).groups()]
+def cmd(cfg) -> None:
+    """
+    Construct the cmake command plus args.
+    :param cfg: cmake build type
+    :return: cmd_list
+    :env vars: optional
+        CMAKE_CACHE_FILE = path to CMakeCache.txt
+        CMAKE_TOOLCHAIN_FILE = path to toolchain.cmake
+        CMAKE_BUILD_TYPE = valid build type (default Release)
+    """
+    cmd_list = ['cmake']
+    cmake_cache_file = environ.get('CMAKE_CACHE_FILE', '')
+    if cmake_cache_file:
+        cmd_list += ['-C', cmake_cache_file]
+    toolchain_file = environ.get('CMAKE_TOOLCHAIN_FILE', '')
+    if toolchain_file:
+        cmd_list += ['-DCMAKE_TOOLCHAIN_FILE={}'.format(toolchain_file)]
+    build_type = environ.get('CMAKE_BUILD_TYPE', '')
+    if build_type:
+        cmd_list += ['-DCMAKE_BUILD_TYPE={}'.format(build_type)]
+    else:
+        cmd_list += ['-DCMAKE_BUILD_TYPE={}'.format(cfg)]
+    cmd_list += ['.']
+    return cmd_list
 
-cmdclass = {'test': TestCommand}
 
-ext_files = []
-if '--cython' in sys.argv or not os.path.exists('src/re2.cpp'):
-    # Using Cython
-    try:
-        sys.argv.remove('--cython')
-    except ValueError:
-        pass
-    from Cython.Compiler.Main import Version
-    if majorminor(MINIMUM_CYTHON_VERSION) >= majorminor(Version.version):
-        raise ValueError('Cython is version %s, but needs to be at least %s.'
-                % (Version.version, MINIMUM_CYTHON_VERSION))
-    from Cython.Distutils import build_ext
-    from Cython.Build import cythonize
-    cmdclass['build_ext'] = build_ext
-    use_cython = True
-else:
-    # Building from C
-    ext_files.append('src/re2.cpp')
-    use_cython = False
+def src(file: str) -> str:
+    """Return path to the given file in src."""
+    return join(dirname(__file__), 'src', file)
 
 
-# Locate the re2 module
-_re2_prefixes = ['/usr', '/usr/local', '/opt/', '/opt/local', os.environ.get('HOME', '') + '/.local']
+class CMakeBuild(build_ext):
+    """CMake extension builder and process runner."""
+    def finalize_options(self) -> None:
+        super().finalize_options()
+        mkpath(self.build_temp)
+        cfg = "Debug" if self.debug else "Release"
+        cmake_cmd = cmd(cfg)
+        copy_file(join(dirname(__file__), 'CMakeLists.txt'), self.build_temp)
+        log.info('using {}'.format(cmake_cmd))
+        try:
+            cmake = run(
+                cmake_cmd, check=True,
+                stdout=DEVNULL, stderr=PIPE,
+                cwd=self.build_temp, universal_newlines=True)
+        except CalledProcessError as e:
+            log.error(e.stderr.strip())
+            raise DistutilsExecError(str(e))
 
-re2_prefix = ''
-for a in _re2_prefixes:
-    if os.path.exists(os.path.join(a, 'include', 're2')):
-        re2_prefix = a
-        break
+        for key, value in map(methodcaller('groups'),
+                              re.finditer(r'^re2_(\w*)=(.*)$',
+                                          cmake.stderr, re.MULTILINE)):
+            for ext in self.extensions:
+                getattr(ext, key).extend(value.split(';'))
 
-def get_long_description():
-    with io.open(os.path.join(BASE_DIR, 'README.rst'), encoding='utf8') as inp:
-        return inp.read()
 
-def get_authors():
-    author_re = re.compile(r'^\s*(.*?)\s+<.*?\@.*?>', re.M)
-    authors_f = open(os.path.join(BASE_DIR, 'AUTHORS'))
-    authors = [match.group(1) for match in author_re.finditer(authors_f.read())]
-    authors_f.close()
-    return ', '.join(authors)
+class CleanCpp(clean):
+    """Remove Cython C++ outputs on clean command."""
+    def run(self) -> None:
+        for cpp in [src('re2.cpp')]:
+            log.info(f'removing {cpp!r}')
+            try:
+                unlink(cpp)
+            except OSError as e:
+                raise DistutilsFileError(
+                    f'could not delete {cpp!r}: {e.strerror}')
+        super().run()
 
-def main():
-    os.environ['GCC_COLORS'] = 'auto'
-    include_dirs = [os.path.join(re2_prefix, 'include')] if re2_prefix else []
-    libraries = ['re2']
-    library_dirs = [os.path.join(re2_prefix, 'lib')] if re2_prefix else []
-    runtime_library_dirs = [os.path.join(re2_prefix, 'lib')
-            ] if re2_prefix else []
-    extra_compile_args = ['-O0', '-g'] if DEBUG else [
-            '-O3', '-march=native', '-DNDEBUG']
-    # Older GCC version such as on CentOS 6 do not support C++11
-    if not platform.python_compiler().startswith('GCC 4.4.7'):
-        extra_compile_args.append('-std=c++11')
-    ext_modules = [
-        Extension(
-            're2',
-            sources=['src/re2.pyx' if use_cython else 'src/re2.cpp'],
-            language='c++',
-            include_dirs=include_dirs,
-            libraries=libraries,
-            library_dirs=library_dirs,
-            runtime_library_dirs=runtime_library_dirs,
-            extra_compile_args=['-DPY2=%d' % PY2] + extra_compile_args,
-            extra_link_args=['-g'] if DEBUG else ['-DNDEBUG'],
-        )]
-    if use_cython:
-        ext_modules = cythonize(
-            ext_modules,
-            language_level=3,
-            annotate=True,
-            compiler_directives={
-                'embedsignature': True,
-                'warn.unused': True,
-                'warn.unreachable': True,
-            })
-    setup(
-        name='pyre2',
-        version='0.3.2',
-        description='Python wrapper for Google\'s RE2 using Cython',
-        long_description=get_long_description(),
-	long_description_content_type='text/x-rst',
-        author=get_authors(),
-        license='New BSD License',
-        author_email='andreas@unstable.nl',
-        url='https://github.com/andreasvc/pyre2',
-        ext_modules = ext_modules,
-        cmdclass=cmdclass,
-        zip_safe=False,
-        classifiers = [
-            'License :: OSI Approved :: BSD License',
-            'Programming Language :: Cython',
-            'Programming Language :: Python :: 2.6',
-            'Programming Language :: Python :: 3.3',
-            'Intended Audience :: Developers',
-            'Topic :: Software Development :: Libraries :: Python Modules',
-            ],
-        )
 
-if __name__ == '__main__':
-    main()
+setup(cmdclass=dict(build_ext=CMakeBuild, clean=CleanCpp),
+      ext_modules=cythonize(
+          Extension(name='re2', sources=[src('re2.pyx')],
+                    define_macros=[('CYTHON_TRACE', TRACE)],
+                    extra_compile_args=[CPPSTD, '-DPY2=%d' % PY2],
+                    libraries=['re2'],
+                    language='c++'),
+          compiler_directives={
+              'binding': True,
+              'linetrace': TRACE,
+              'language_level': '3',
+              'embedsignature': True,
+              'warn.unused': True,
+              'warn.unreachable': True
+          }),
+      use_scm_version={'root': '.',
+          'relative_to': __file__,
+          'fallback_version': fallback_ver,
+          'version_scheme': 'post-release',
+      },
+      setup_requires=['setuptools_scm'],
+)
