@@ -1,19 +1,5 @@
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
-if(CMAKE_CXX_COMPILER_ID STREQUAL Clang)
-  set(CLANG_DEFAULT_CXX_STDLIB libc++)
-  set(CLANG_DEFAULT_RTLIB compiler-rt)
-endif()
-
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING
-            "Default build type: RelWithDebInfo" FORCE)
-endif()
-
 find_package(Cython REQUIRED)
 
 set(cython_module re2)
@@ -47,9 +33,30 @@ target_include_directories(${cython_module} PUBLIC
 target_compile_definitions(${cython_module} PRIVATE PY2=0)
 target_compile_definitions(${cython_module} PRIVATE VERSION_INFO=${SCM_VERSION_INFO})
 
-target_link_libraries(${cython_module} PRIVATE re2::re2)
-# macos/appleclang needs this
 target_link_libraries(${cython_module} PRIVATE pybind11::module)
+target_link_libraries(${cython_module} PRIVATE pybind11::python_link_helper)
+# here we get to jump through some hoops to find libre2 on the manylinux
+# docker CI images, etc
+find_package(re2 CONFIG NAMES re2)
+
+if(re2_FOUND)
+  message(STATUS "System re2 found")
+  target_link_libraries(${cython_module} PRIVATE re2::re2)
+elseif(NOT MSVC)
+  message(STATUS "Trying PkgConfig")
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(RE2 IMPORTED_TARGET re2)
+
+  if(RE2_FOUND)
+    include_directories(${RE2_INCLUDE_DIRS})
+    target_link_libraries(${cython_module} PRIVATE PkgConfig::RE2)
+  else()
+    # last resort for manylinux: just try it
+    message(STATUS "Blindly groping instead")
+    link_directories("/usr/lib64" "/usr/lib")
+    target_link_libraries(${cython_module} PRIVATE "libre2.so")
+  endif()
+endif()
 
 if(MSVC)
   target_compile_options(${cython_module} PRIVATE /utf-8)

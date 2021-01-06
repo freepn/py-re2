@@ -8,18 +8,15 @@ on:
 
 jobs:
   build_wheels:
-    name: Build ALE Python on ${{ matrix.config.os }}
-    defaults:
-      run:
-        shell: bash
+    name: Build re2 wheels on ${{ matrix.os }} for Python
+    runs-on: ${{ matrix.os }}
+    env:
+      MANYLINUX2010_X86_64_TAG: "2020-12-03-912b0de"
     strategy:
+      fail-fast: false
       matrix:
-        config: [
-          {"os": "ubuntu-20.04", "deps": ["re2"], "triplet": "x64-linux"},
-          {"os": "windows-latest", "deps": ["re2"], "triplet": "x64-windows"},
-          {"os": "macos-latest", "deps": ["re2"], "triplet": "x64-osx"}
-        ]
-    runs-on: ${{ matrix.config.os }}
+        os: [ubuntu-20.04, macos-latest, windows-latest]
+
 
     steps:
       - name: Cancel previous runs on the same branch
@@ -28,17 +25,19 @@ jobs:
           access_token: ${{ github.token }}
 
       - uses: actions/checkout@v2
-
-      - name: Docker Login
-        if: matrix.config.os == 'ubuntu-latest'
-        run: docker login ghcr.io --username "${GITHUB_ACTOR}" --password "${GITHUB_CR_TOKEN}"
-        env:
-          GITHUB_CR_TOKEN: ${{ secrets.CR_TOKEN }}
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v2
         name: Install Python
         with:
           python-version: '3.7'
+
+      - name: Prepare compiler environment for Windows
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
 
       - name: Install cibuildwheel
         run: |
@@ -46,14 +45,24 @@ jobs:
           python -m pip install -r requirements-cibw.txt
 
       - name: Build wheels
+        env:
+          CIBW_BUILD: cp37-* cp38-* cp39-*
+          CIBW_SKIP: "*-win32"
+          CIBW_BEFORE_ALL_LINUX: >
+            yum -y -q --enablerepo=extras install epel-release
+            && yum install -y re2-devel ninja-build
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: "LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH auditwheel repair -w {dest_dir} {wheel}"
+          CIBW_BEFORE_ALL_MACOS: >
+            brew install -s re2
+            && brew install pybind11 ninja
+          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.14
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: "DYLD_LIBRARY_PATH=/usr/local/Cellar/re2/20201101/lib:$DYLD_LIBRARY_PATH delocate-listdeps {wheel} && delocate-wheel -w {dest_dir} -v {wheel}"
+          CIBW_BEFORE_ALL_WINDOWS: >
+            vcpkg install re2:x64-windows
+            && vcpkg integrate install
+          CIBW_ENVIRONMENT_WINDOWS: 'CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake'
         run: |
           python -m cibuildwheel --output-dir wheelhouse
-        env:
-          CIBW_MANYLINUX_X86_64_IMAGE: "ghcr.io/mgbellemare/manylinux2014-vcpkg"
-          CIBW_BUILD: "cp3[6789]-*"
-          CIBW_SKIP: "*i686* *win32*"
-          CIBW_ENVIRONMENT: "VCPKG_DEFAULT_TRIPLET=${{ matrix.config.triplet }}"
-          CIBW_BEFORE_ALL: "vcpkg install ${{ join(matrix.config.deps, ' ') }} --triplet ${{ matrix.config.triplet }}"
 
       - uses: actions/upload-artifact@v2
         with:
@@ -72,4 +81,4 @@ jobs:
           
       - name: Check number of downloaded artifacts
         #run: .github/workflows/wheel-check.sh 9
-        run: ls -l ./wheelhouse/*.whl
+        run: ls -lR
