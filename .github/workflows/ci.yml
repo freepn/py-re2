@@ -21,6 +21,7 @@ jobs:
     env:
       OS: ${{ matrix.os }}
       PYTHON: ${{ matrix.python-version }}
+      PIP_DOWNLOAD_CACHE: ${{ github.workspace }}/../.pip_download_cache
     strategy:
       fail-fast: true
       matrix:
@@ -32,21 +33,14 @@ jobs:
       with:
         fetch-depth: 0
 
-    # Restore from cache the previously built ports. If cache-miss, download and build vcpkg
-    #- name: Restore from cache and install vcpkg
-      #if: runner.os == 'Windows'
-      #uses: lukka/run-vcpkg@v6
-      #with:
-        #setupOnly: true
-
     - uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Add requirements
       run: |
-        python -m pip install --upgrade pip wheel setuptools
-        pip install tox
+        python -m pip install --upgrade pip
+        pip install tox tox-gh-actions
 
     - name: Prepare compiler environment for Windows
       if: runner.os == 'Windows'
@@ -59,14 +53,14 @@ jobs:
       uses: lukka/run-vcpkg@v6.0
       if: runner.os == 'Windows'
       with:
-        vcpkgArguments: re2:x64-windows pybind11:x64-windows
+        vcpkgArguments: re2:x64-windows
         vcpkgGitCommitId: 066c6fd712a3b7015388de644e44faf9774f3641
 
     - name: Install macos deps with brew
       if: runner.os == 'macOS'
       run: |
         brew install -s re2
-        brew install pybind11 ninja
+        brew install ninja
 
     - name: Install Ubuntu build deps
       if: runner.os == 'Linux'
