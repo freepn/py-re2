@@ -37,8 +37,6 @@ else()
   FetchContent_MakeAvailable(pybind11)
 endif()
 
-#include(pybind11Tools)
-
 find_package(Threads REQUIRED)
 
 if (${PYTHON_IS_DEBUG})
