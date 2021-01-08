@@ -33,8 +33,6 @@ target_include_directories(${cython_module} PUBLIC
 target_compile_definitions(${cython_module} PRIVATE PY2=0)
 target_compile_definitions(${cython_module} PRIVATE VERSION_INFO=${SCM_VERSION_INFO})
 
-target_link_libraries(${cython_module} PRIVATE pybind11::module)
-target_link_libraries(${cython_module} PRIVATE pybind11::python_link_helper)
 # here we get to jump through some hoops to find libre2 on the manylinux
 # docker CI images, etc
 find_package(re2 CONFIG NAMES re2)
@@ -56,6 +54,12 @@ elseif(NOT MSVC)
     link_directories("/usr/lib64" "/usr/lib")
     target_link_libraries(${cython_module} PRIVATE "libre2.so")
   endif()
+endif()
+
+if(APPLE)
+  # macos/appleclang needs this
+  target_link_libraries(${cython_module} PRIVATE pybind11::module)
+  target_link_libraries(${cython_module} PRIVATE pybind11::python_link_helper)
 endif()
 
 if(MSVC)

@@ -1,29 +1,33 @@
+{% set name = "pyre2" %}
+{% set version = "0.3.2.post1" %}
+
 package:
-  name: pyre2
-  version: 0.3.2.post1
+  name: "{{ name|lower }}"
+  version: "{{ version }}"
 
 source:
   path: ..
 
 build:
   number: 0
-  script: python -m pip install . -vvv
+  script: "{{ PYTHON }} -m pip install . -vv"
 
 requirements:
   build:
     - "{{ compiler('cxx') }}"
-    - re2
-    - cmake
+    - cmake >=3.18
+    - pybind11
     - ninja
     - cython
 
   host:
     - python
     - pip
+    - re2
 
   run:
     - python
-
+    - re2
 
 test:
   imports:
@@ -34,5 +38,14 @@ test:
     - python -m unittest discover -f -s tests
 
 about:
-  summary: Python wrapper for RE2
+  home: "https://github.com/andreasvc/pyre2"
+  license: BSD
+  license_family: BSD
   license_file: LICENSE
+  summary: "Python wrapper for Google's RE2 using Cython"
+  doc_url: "https://github.com/andreasvc/pyre2/blob/master/README.rst"
+  dev_url: "https://github.com/andreasvc/pyre2"
+
+extra:
+  recipe-maintainers:
+    - sarnold
