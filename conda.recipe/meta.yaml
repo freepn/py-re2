@@ -1,0 +1,38 @@
+package:
+  name: pyre2
+  version: 0.3.2-1
+
+source:
+  path: ..
+
+build:
+  number: 0
+  script: python -m pip install . -vvv
+
+requirements:
+  build:
+    - "{{ compiler('cxx') }}"
+    - re2
+    - cmake
+    - ninja
+    - cython
+
+  host:
+    - python
+    - pip
+
+  run:
+    - python
+
+
+test:
+  imports:
+    - re2
+  source_files:
+    - tests
+  commands:
+    - python -m unittest discover -f -s tests
+
+about:
+  summary: Python wrapper for RE2
+  license_file: LICENSE
