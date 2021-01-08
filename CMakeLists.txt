@@ -19,16 +19,8 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 include(GNUInstallDirs)
-include(cmake/python.cmake)
-
-if (${PYTHON_IS_DEBUG})
-  set(PY_DEBUG ON)
-endif()
 
 find_package(pybind11 CONFIG)
-if(NOT pybind11_FOUND)
-  find_package(pybind11)
-endif()
 
 if(pybind11_FOUND)
   message(STATUS "System pybind11 found")
@@ -45,7 +37,13 @@ else()
   FetchContent_MakeAvailable(pybind11)
 endif()
 
+#include(pybind11Tools)
+
 find_package(Threads REQUIRED)
+
+if (${PYTHON_IS_DEBUG})
+  set(PY_DEBUG ON)
+endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
     ${PROJECT_SOURCE_DIR}/cmake/modules/)
