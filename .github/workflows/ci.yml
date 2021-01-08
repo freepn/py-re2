@@ -3,10 +3,6 @@ name: ci
 on:
   workflow_dispatch:
   pull_request:
-    paths-ignore:
-    - '**.rst'
-    - '.github/workflows/build.yml'
-    - '.github/workflows/release.yml'
   push:
     branches:
       - master
@@ -85,3 +81,22 @@ jobs:
     - name: Build dist pkgs
       run: |
         tox -e deploy
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: wheels
+        path: ./dist/*.whl
+
+  check_artifacts:
+    name: Check artifacts are correct
+    needs: [build]
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          name: wheels
+
+      - name: Check number of downloaded artifacts
+        #run: .github/workflows/wheel-check.sh 9
+        run: ls -lR
