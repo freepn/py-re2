@@ -8,6 +8,9 @@ import subprocess
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 
+
+__version__ = '0.3.2'
+
 # Convert distutils Windows platform specifiers to CMake -A arguments
 PLAT_TO_CMAKE = {
     "win32": "Win32",
@@ -15,8 +18,6 @@ PLAT_TO_CMAKE = {
     "win-arm32": "ARM",
     "win-arm64": "ARM64",
 }
-
-fallback_ver = '0.3.2'
 
 # A CMakeExtension needs a sourcedir instead of a file list.
 class CMakeExtension(Extension):
@@ -50,7 +51,7 @@ class CMakeBuild(build_ext):
         cmake_args = [
             "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={}".format(extdir),
             "-DPYTHON_EXECUTABLE={}".format(sys.executable),
-            "-DSCM_VERSION_INFO={}".format(fallback_ver),
+            "-DSCM_VERSION_INFO={}".format(__version__),
             "-DCMAKE_BUILD_TYPE={}".format(cfg),  # not used on MSVC, but no harm
         ]
         build_args = ["--verbose"]
@@ -112,12 +113,7 @@ class CMakeBuild(build_ext):
 
 
 setup(
-    use_scm_version={'root': '.',
-                     'relative_to': __file__,
-                     'fallback_version': fallback_ver,
-                     'version_scheme': 'post-release',
-                     },
-    setup_requires=['setuptools_scm'],
+    version=__version__,
     ext_modules=[CMakeExtension('re2')],
     cmdclass={'build_ext': CMakeBuild},
     zip_safe=False,
