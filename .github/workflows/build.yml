@@ -7,8 +7,8 @@ on:
       - master
 
 jobs:
-  build_wheels:
-    name: Build re2 wheels on ${{ matrix.os }} for Python
+  cibw_wheels:
+    name: Build re2 wheels on ${{ matrix.os }} using CIBW
     runs-on: ${{ matrix.os }}
     env:
       MANYLINUX2010_X86_64_TAG: "2020-12-03-912b0de"
@@ -41,7 +41,7 @@ jobs:
 
       - name: Build wheels
         env:
-          CIBW_BUILD: cp37-* cp38-* cp39-*
+          CIBW_BUILD: cp36-* cp37-* cp38-* cp39-*
           CIBW_SKIP: "*-win32"
           CIBW_BEFORE_ALL_LINUX: >
             yum -y -q --enablerepo=extras install epel-release
@@ -66,7 +66,7 @@ jobs:
 
   check_artifacts:
     name: Check artifacts are correct
-    needs: [build_wheels]
+    needs: [cibw_wheels]
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -76,4 +76,4 @@ jobs:
           
       - name: Check number of downloaded artifacts
         #run: .github/workflows/wheel-check.sh 9
-        run: ls -lR
+        run: find . -name \*.whl | wc -l

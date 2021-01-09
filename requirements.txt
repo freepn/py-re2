@@ -6,3 +6,4 @@ pybind11>=2.6.0
 ninja; sys_platform != 'Windows'
 twine
 build
+pep517

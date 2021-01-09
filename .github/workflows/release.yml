@@ -7,8 +7,8 @@ on:
       - '*'
 
 jobs:
-  create_wheels:
-    name: Build re2 wheels on ${{ matrix.os }} for Python
+  cibw_wheels:
+    name: Build re2 wheels on ${{ matrix.os }} using CIBW
     runs-on: ${{ matrix.os }}
     env:
       MANYLINUX2010_X86_64_TAG: "2020-12-03-912b0de"
