@@ -9,7 +9,6 @@ on:
 
 jobs:
   python_wheels:
-    name: Build re2 wheels on ${{ matrix.os }} using PEP517
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -100,5 +99,4 @@ jobs:
           name: wheels
 
       - name: Check number of downloaded artifacts
-        #run: .github/workflows/wheel-check.sh 9
-        run: find . -name \*.whl | wc -l
+        run: .github/workflows/wheel-check.sh 8

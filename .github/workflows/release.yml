@@ -8,7 +8,6 @@ on:
 
 jobs:
   cibw_wheels:
-    name: Build re2 wheels on ${{ matrix.os }} using CIBW
     runs-on: ${{ matrix.os }}
     env:
       MANYLINUX2010_X86_64_TAG: "2020-12-03-912b0de"
@@ -25,7 +24,7 @@ jobs:
       - uses: actions/setup-python@v2
         name: Install Python
         with:
-          python-version: '3.7'
+          python-version: '3.8'
 
       - name: Prepare compiler environment for Windows
         if: runner.os == 'Windows'
@@ -40,7 +39,7 @@ jobs:
 
       - name: Build wheels
         env:
-          CIBW_BUILD: cp37-* cp38-* cp39-*
+          CIBW_BUILD: cp36-* cp37-* cp38-* cp39-*
           CIBW_SKIP: "*-win32"
           CIBW_BEFORE_ALL_LINUX: >
             yum -y -q --enablerepo=extras install epel-release
@@ -55,6 +54,7 @@ jobs:
             vcpkg install re2:x64-windows
             && vcpkg integrate install
           CIBW_ENVIRONMENT_WINDOWS: 'CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake'
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: "call ci/wheel_repair.bat {wheel} {dest_dir}"
         run: |
           python -m cibuildwheel --output-dir wheelhouse
 
@@ -64,8 +64,7 @@ jobs:
           path: ./wheelhouse/*.whl
 
   create_release:
-    name: Create Release
-    needs: [create_wheels]
+    needs: [cibw_wheels]
     runs-on: ubuntu-20.04
 
     steps:

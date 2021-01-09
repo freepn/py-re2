@@ -1,4 +1,4 @@
-name: wheels
+name: Build
 
 on:
   workflow_dispatch:
@@ -8,7 +8,6 @@ on:
 
 jobs:
   cibw_wheels:
-    name: Build re2 wheels on ${{ matrix.os }} using CIBW
     runs-on: ${{ matrix.os }}
     env:
       MANYLINUX2010_X86_64_TAG: "2020-12-03-912b0de"
@@ -16,7 +15,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-20.04, macos-latest, windows-latest]
-
 
     steps:
       - uses: actions/checkout@v2
@@ -75,5 +73,4 @@ jobs:
           name: wheels
           
       - name: Check number of downloaded artifacts
-        #run: .github/workflows/wheel-check.sh 9
-        run: find . -name \*.whl | wc -l
+        run: .github/workflows/wheel-check.sh 16
