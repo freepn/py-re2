@@ -184,4 +184,6 @@ jobs:
           body_path: CHANGES.md
           draft: false
           prerelease: false
-          files: ./pyre2*.whl
+          files: |
+            cibw-wheels/pyre2*.whl
+            python-wheels/pyre2*.whl
