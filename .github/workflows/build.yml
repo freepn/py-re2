@@ -54,7 +54,7 @@ jobs:
             vcpkg install re2:x64-windows
             && vcpkg integrate install
           CIBW_ENVIRONMENT_WINDOWS: 'CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake'
-          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: "call ci/wheel_repair.bat {wheel} {dest_dir}"
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: bash ci/repair_windows_wheels.sh {wheel} {dest_dir} 64
         run: |
           python -m cibuildwheel --output-dir wheelhouse
 
