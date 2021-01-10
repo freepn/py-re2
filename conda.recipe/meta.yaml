@@ -1,0 +1,51 @@
+{% set name = "pyre2" %}
+{% set version = "0.3.2.post1" %}
+
+package:
+  name: "{{ name|lower }}"
+  version: "{{ version }}"
+
+source:
+  path: ..
+
+build:
+  number: 0
+  script: "{{ PYTHON }} -m pip install . -vv"
+
+requirements:
+  build:
+    - "{{ compiler('cxx') }}"
+    - cmake >=3.15
+    - pybind11
+    - ninja
+    - cython
+
+  host:
+    - python
+    - pip
+    - re2
+
+  run:
+    - python
+    - re2
+
+test:
+  imports:
+    - re2
+  source_files:
+    - tests
+  commands:
+    - python -m unittest discover -f -s tests
+
+about:
+  home: "https://github.com/freepn/py-re2"
+  license: BSD-3-Clause
+  license_family: BSD
+  license_file: LICENSE
+  summary: "Python wrapper for Google re2 library using Cython"
+  doc_url: "https://github.com/freepn/py-re2/blob/master/README.rst"
+  dev_url: "https://github.com/freepn/py-re2"
+
+extra:
+  recipe-maintainers:
+    - sarnold

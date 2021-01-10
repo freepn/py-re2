@@ -7,48 +7,64 @@ on:
       - '*'
 
 jobs:
-  create_wheels:
-    name: Build wheels on ${{ matrix.os }} for Python
+  cibw_wheels:
     runs-on: ${{ matrix.os }}
     env:
       MANYLINUX2010_X86_64_TAG: "2020-12-03-912b0de"
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, macos-latest]
+        os: [ubuntu-20.04, macos-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v2
         name: Install Python
         with:
-          python-version: 3.7
+          python-version: '3.8'
+
+      - name: Prepare compiler environment for Windows
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
 
       - name: Install cibuildwheel
         run: |
-          python -m pip install cibuildwheel==1.7.1
-      - name: Install Visual C++ for Python 2.7
-        if: runner.os == 'Windows'
-        run: |
-          choco install vcpython27 -f -y
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-cibw.txt
+
       - name: Build wheels
         env:
+          CIBW_BUILD: cp36-* cp37-* cp38-* cp39-*
+          CIBW_SKIP: "*-win32"
           CIBW_BEFORE_ALL_LINUX: >
             yum -y -q --enablerepo=extras install epel-release
-            && yum install -y re2-devel
-          CIBW_BEFORE_ALL_MACOS: brew install re2
-          CIBW_BUILD: cp36-* cp37-* cp38-*
+            && yum install -y re2-devel ninja-build
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: "LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH auditwheel repair -w {dest_dir} {wheel}"
+          CIBW_BEFORE_ALL_MACOS: >
+            brew install -s re2
+            && brew install pybind11 ninja
+          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.14
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: "DYLD_LIBRARY_PATH=/usr/local/Cellar/re2/20201101/lib:$DYLD_LIBRARY_PATH delocate-listdeps {wheel} && delocate-wheel -w {dest_dir} -v {wheel}"
+          CIBW_BEFORE_ALL_WINDOWS: >
+            vcpkg install re2:x64-windows
+            && vcpkg integrate install
+          CIBW_ENVIRONMENT_WINDOWS: 'CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake'
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: "call ci/wheel_repair.bat {wheel} {dest_dir}"
         run: |
           python -m cibuildwheel --output-dir wheelhouse
+
       - uses: actions/upload-artifact@v2
         with:
           name: wheels
           path: ./wheelhouse/*.whl
 
   create_release:
-    name: Create Release
-    needs: [create_wheels]
+    needs: [cibw_wheels]
     runs-on: ubuntu-20.04
 
     steps:
