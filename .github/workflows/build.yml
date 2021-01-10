@@ -1,7 +1,8 @@
-name: Build
+name: build
 
 on:
   workflow_dispatch:
+  pull_request:
   push:
     branches:
       - master
@@ -9,8 +10,6 @@ on:
 jobs:
   cibw_wheels:
     runs-on: ${{ matrix.os }}
-    env:
-      MANYLINUX2010_X86_64_TAG: "2020-12-03-912b0de"
     strategy:
       fail-fast: false
       matrix:
@@ -24,7 +23,7 @@ jobs:
       - uses: actions/setup-python@v2
         name: Install Python
         with:
-          python-version: '3.7'
+          python-version: '3.8'
 
       - name: Prepare compiler environment for Windows
         if: runner.os == 'Windows'
@@ -54,7 +53,6 @@ jobs:
             vcpkg install re2:x64-windows
             && vcpkg integrate install
           CIBW_ENVIRONMENT_WINDOWS: 'CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake'
-          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: bash ci/repair_windows_wheels.sh {wheel} {dest_dir} 64
         run: |
           python -m cibuildwheel --output-dir wheelhouse
 
