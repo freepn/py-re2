@@ -185,5 +185,5 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            cibw-wheels/pyre2*.whl
             python-wheels/pyre2*.whl
+          # cibw-wheels/pyre2*.whl
