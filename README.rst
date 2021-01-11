@@ -16,6 +16,58 @@ Intended as a drop-in replacement for ``re``. Unicode is supported by encoding
 to UTF-8, and bytes strings are treated as UTF-8 when the UNICODE flag is given.
 For best performance, work with UTF-8 encoded bytes strings.
 
+Platform Dependencies
+=====================
+
+Requirements for building the C++ extension from the repo source:
+
+* Building requires RE2, pybind11, and cmake installed in the build
+  environment.
+
+  + On Ubuntu/Debian, install cmake, pybind11-dev, and libre2-dev packages
+  + On Gentoo, install dev-util/cmake and dev-python/pybind11, and dev-libs/re2
+  + For a venv you can install the pybind11 and cython packages from PyPI
+
+.. _from the FreePN overlay: https://github.com/freepn/freepn-overlay
+
+
+On MacOS, use the ``brew`` package manager::
+
+  $ brew install -s re2 pybind11
+
+On Windows use the ``vcpkg`` package manager::
+
+  $ vcpkg install re2:x64-windows pybind11:x64-windows
+
+
+With at least Python 3.6 available, install ``tox`` to run the tests
+or build wheel packages using different tox environments::
+
+  $ tox  # to run tests on all available python versions
+  $ tox -e py  # to run tests on the default system python
+  $ tox -e dev  # to install locally via pip and run tests
+  $ tox -e deploy  # to build/check sdist and wheel targets
+
+
+You can pass some cmake environment variables (through tox) to alter the
+build type or pass a toolchain file (the latter is required on Windows)
+or specify the cmake generator.
+
+::
+
+  $ CMAKE_GENERATOR="Unix Makefiles" CMAKE_TOOLCHAIN_FILE=clang_toolchain.cmake tox -e deploy
+
+
+Platform-agnostic building with conda
+-------------------------------------
+
+An alternative to the above is provided via the ``conda`` recipe (use the
+`miniconda installer`_ if you don't have ``conda`` installed already)'.
+
+
+.. _miniconda installer: https://docs.conda.io/en/latest/miniconda.html
+
+
 Backwards Compatibility
 =======================
 
