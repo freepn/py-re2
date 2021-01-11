@@ -126,9 +126,6 @@ jobs:
     - name: Build dist pkgs
       run: |
         tox -e deploy
-    - name: Test wheels
-      run: |
-        tox -e check
 
     - name: Upload artifacts
       if: runner.os != 'Windows'

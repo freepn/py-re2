@@ -62,7 +62,7 @@ Platform-agnostic building with conda
 -------------------------------------
 
 An alternative to the above is provided via the ``conda`` recipe (use the
-`miniconda installer`_ if you don't have ``conda`` installed already)'.
+`miniconda installer`_ if you don't have ``conda`` installed already).
 
 
 .. _miniconda installer: https://docs.conda.io/en/latest/miniconda.html
