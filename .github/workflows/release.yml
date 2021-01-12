@@ -37,21 +37,27 @@ jobs:
 
       - name: Build wheels
         env:
+          CIBW_MANYLINUX_X86_64_IMAGE: quay.io/pypa/manylinux2010_x86_64:latest
+          CIBW_MANYLINUX_I686_IMAGE: quay.io/pypa/manylinux2010_i686:latest
           CIBW_BUILD: cp36-* cp37-* cp38-* cp39-*
           CIBW_SKIP: "*-win32"
           CIBW_BEFORE_ALL_LINUX: >
             yum -y -q --enablerepo=extras install epel-release
             && yum install -y re2-devel ninja-build
+            && pip install .
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: "LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH auditwheel repair -w {dest_dir} {wheel}"
           CIBW_BEFORE_ALL_MACOS: >
             brew install -s re2
             && brew install pybind11 ninja
-          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.14
+            && pip install .
+          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.09
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: "DYLD_LIBRARY_PATH=/usr/local/Cellar/re2/20201101/lib:$DYLD_LIBRARY_PATH delocate-listdeps {wheel} && delocate-wheel -w {dest_dir} -v {wheel}"
           CIBW_BEFORE_ALL_WINDOWS: >
             vcpkg install re2:x64-windows
             && vcpkg integrate install
+            && pip install .
           CIBW_ENVIRONMENT_WINDOWS: 'CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake'
+          CIBW_TEST_COMMAND: python -c "import re2"
         run: |
           python -m cibuildwheel --output-dir wheelhouse
 
@@ -182,5 +188,5 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            python-wheels/pyre2*.whl
-          # cibw-wheels/pyre2*.whl
+            cibw-wheels/pyre2*.whl
+          # python-wheels/pyre2*.whl

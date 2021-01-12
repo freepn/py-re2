@@ -23,7 +23,7 @@ PLAT_TO_CMAKE = {
 # A CMakeExtension needs a sourcedir instead of a file list.
 class CMakeExtension(Extension):
     def __init__(self, name, sourcedir=""):
-        Extension.__init__(self, name, sources=[])
+        Extension.__init__(self, name, sources=[], libraries=['re2'])
         self.sourcedir = os.path.abspath(sourcedir)
 
 
