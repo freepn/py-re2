@@ -10,7 +10,7 @@ from setuptools.command.build_ext import build_ext
 
 
 # update the version both here and in conda.recipe/meta.yaml
-__version__ = '0.3.2.post2'
+__version__ = '0.3.2.post3'
 
 # Convert distutils Windows platform specifiers to CMake -A arguments
 PLAT_TO_CMAKE = {
