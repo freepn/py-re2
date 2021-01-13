@@ -67,7 +67,7 @@ jobs:
           path: ./wheelhouse/*.whl
 
   create_release:
-    needs: [python_wheels, cibw_wheels]
+    needs: [cibw_wheels]
     runs-on: ubuntu-20.04
 
     steps:
@@ -115,4 +115,3 @@ jobs:
           prerelease: false
           files: |
             cibw-wheels/pyre2*.whl
-          # python-wheels/pyre2*.whl
