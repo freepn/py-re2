@@ -1,3 +1,45 @@
+0.3.2-4
+-------
+
+Changes
+~~~~~~~
+- Ci: add more wheel repair verbosity, upgrade delocate pkg (PR39)
+  [Stephen L Arnold]
+- Ci: test updated conda recipe (based on feedback from conda-forge)
+  [Stephen L Arnold]
+- Ci: cleanup release workflow (only publish cibuildwheels)
+  [Stephen L Arnold]
+- Add platform deps section and conda note to readme. [Stephen L Arnold]
+
+  * required: must use PEP 440-compliant post version in conda recipe
+- Ci: relabel wheel jobs, use pep517 for ci wheels, add py36 to cibw.
+  [Stephen L Arnold]
+- Ci: get wheel artifacts from ci build, add cache to conda build.
+  [Stephen L Arnold]
+- Ci: refactor conda recipe and fix pybind11 links for apple. [Stephen L
+  Arnold]
+- Ci: add conda build recipe and corresponding workflow file. [Stephen L
+  Arnold]
+- Ci: add pybind11 cmake fallback, update CI configs, add reqs files.
+  [Stephen L Arnold]
+
+Fixes
+~~~~~
+- update macos wheel repair and bump post version for testing
+  [Stephen L Arnold]
+- Centos eol yum error, epel-release install and repo=enable to find
+  pkgs. [Stephen L Arnold]
+- Pickling test import error, add setup.cfg for nose. [Stephen L Arnold]
+
+
+v0.3.2 (2020-12-16)
+-------------------
+- Bump version. [Andreas van Cranenburgh]
+- Merge pull request #18 from freepn/github-ci. [Andreas van Cranenburgh]
+
+  workaroud for manylinux dependency install error plus release automation
+
+
 v0.3.1 (2020-10-27)
 -------------------
 - Bump version. [Andreas van Cranenburgh]
@@ -7,8 +49,7 @@ v0.3.1 (2020-10-27)
 v0.3 (2020-10-27)
 -----------------
 - Bump version. [Andreas van Cranenburgh]
-- Merge pull request #14 from yoav-orca/master. [Andreas van
-  Cranenburgh]
+- Merge pull request #14 from yoav-orca/master. [Andreas van Cranenburgh]
 
   Support building wheels automatically using github actions
 - Creating github actions for building wheels. [Yoav Alon]
@@ -173,5 +214,4 @@ v0.3 (2020-10-27)
   Add Python 3 support.
 - Add Python 3 support. [Tarashish Mishra]
 - Version bump. [Michael Axiak]
-
 
